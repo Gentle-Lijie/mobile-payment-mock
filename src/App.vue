@@ -11,17 +11,17 @@
       <router-view />
     </main>
 
-    <button class="floating" @click="showPanel = true">状态控制窗口</button>
-    <ControlPanel v-if="showPanel" @close="showPanel = false" />
+    <button class="floating" @click="openControlWindow">状态控制窗口</button>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import ControlPanel from './components/ControlPanel.vue'
 
-const showPanel = ref(false)
+const openControlWindow = () => {
+  const url = `${window.location.origin}/control`
+  window.open(url, 'control-panel', 'width=1180,height=900,noopener')
+}
 </script>
 
 <style>
