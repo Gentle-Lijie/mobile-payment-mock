@@ -2,11 +2,11 @@
     <section class="page">
         <header class="section-header">
             <div>
-                <p class="eyebrow">家长 / 管理端 · 演示</p>
+                <p class="eyebrow">家长 / 管理端</p>
                 <h1>远程圈存 · 权限调整 · 预警查看</h1>
-                <p class="subtitle">静态操作界面：发起空中圈存、查看请求响应、审阅异常预警</p>
+                <p class="subtitle">发起空中圈存、查看请求响应、审阅异常预警</p>
             </div>
-            <div class="pill">演示模式 · 本地静态数据</div>
+            <div class="pill">本地静态数据</div>
         </header>
 
         <div class="grid">
@@ -30,7 +30,7 @@
                         <input v-model.number="form.amount" type="number" min="1" step="1" />
                     </label>
                     <button class="primary" @click="sendTopup">发送圈存指令</button>
-                    <p class="hint">模拟流程：家长端发指令 → RSA校验 → MPC芯片写入 → 返回圈存回执（静态展示）。</p>
+                    <p class="hint">流程：家长端发指令 → RSA校验 → MPC芯片写入 → 返回圈存回执（本地静态显示）。</p>
                 </div>
                 <div v-if="lastTopup" class="voucher">
                     <div class="voucher-head">圈存回执</div>
@@ -53,7 +53,7 @@
                             <div class="strong">{{ item.label }}</div>
                             <div class="muted">当前限额：{{ item.limit }}</div>
                         </div>
-                        <button class="ghost">编辑（演示用）</button>
+                        <button class="ghost">编辑</button>
                     </div>
                 </div>
             </div>
@@ -72,7 +72,7 @@
             </div>
 
             <div class="card">
-                <div class="card-title">异常预警（与学生端一致）</div>
+                <div class="card-title">异常预警</div>
                 <ul class="alerts">
                     <li v-for="alert in alerts" :key="alert.id" :class="alert.level">
                         <div class="alert-head">
@@ -84,12 +84,26 @@
                     </li>
                 </ul>
             </div>
+
+            <div class="card">
+                <div class="card-title">行为推送</div>
+                <div class="timeline">
+                    <div v-for="msg in pushes" :key="msg.id" class="log-item">
+                        <div class="dot" :class="'lv-' + msg.level"></div>
+                        <div>
+                            <div class="log-head">[{{ msg.level.toUpperCase() }}] {{ msg.title }}</div>
+                            <div class="log-meta">{{ msg.time }} ｜ {{ msg.detail }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 </template>
 
 <script setup>
-    import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
+import { store } from '../state'
 
     const form = reactive({ student: 'STU-20260105', account: 'campus', amount: 50 })
     const lastTopup = ref(null)
@@ -106,26 +120,8 @@
         { id: 'l3', type: '远程冻结', result: '失败', time: '2026-01-04 08:13:29', detail: '指令签名校验不通过，已拒绝' },
     ]
 
-    const alerts = [
-        {
-            id: 'a1',
-            level: 'high',
-            title: '一级预警：疑似盗刷风险',
-            time: '2026-01-05 09:25:14',
-            lat: '30.3200',
-            lng: '120.1900',
-            reason: '10分钟内跨越15公里异地消费，轨迹偏离预设路线',
-        },
-        {
-            id: 'a2',
-            level: 'medium',
-            title: '二级预警：异常频次',
-            time: '2026-01-05 08:58:02',
-            lat: '30.2768',
-            lng: '120.1605',
-            reason: '30分钟内连续4笔小额支付，触发频次阈值',
-        },
-    ]
+    const alerts = computed(() => store.alerts)
+    const pushes = computed(() => store.pushMessages)
 
     const mapAccount = (id) =>
         id === 'campus' ? '校园消费账户' : id === 'bus' ? '公交支付账户' : '社会支付账户'
@@ -138,10 +134,10 @@
             student: form.student || 'STU-000000',
             account: form.account,
             amount,
-            status: '成功（演示）',
+            status: '成功（本地）',
             time: new Date().toISOString().replace('T', ' ').slice(0, 19),
         }
-        alert('圈存指令已发送（演示模式，本地成功回执）')
+        alert('圈存指令已发送（本地回执）')
     }
 </script>
 
@@ -344,6 +340,22 @@
     .alerts li.medium {
         border-color: #f59e0b;
         background: #fffbeb;
+    }
+
+    .dot.lv-info {
+        background: #0ea5e9;
+    }
+
+    .dot.lv-medium {
+        background: #f59e0b;
+    }
+
+    .dot.lv-high {
+        background: #f97316;
+    }
+
+    .dot.lv-critical {
+        background: #ef4444;
     }
 
     .alert-head {
