@@ -4,7 +4,7 @@
             <div>
                 <p class="eyebrow">独立窗口 · 状态控制</p>
                 <h1>场景切换 · 行为推送 · 告警同步</h1>
-                <p class="subtitle">窗口独立于主界面，可实时调整状态、发送多级别推送并同步告警</p>
+                <!-- <p class="subtitle">窗口独立于主界面，可实时调整状态、发送多级别推送并同步告警</p> -->
             </div>
             <button class="ghost" @click="window.close()">关闭窗口</button>
         </header>
@@ -74,6 +74,44 @@
                 </div>
             </div>
 
+            <div class="card">
+                <div class="card-title">支付 / 圈存（同步各端）</div>
+                <div class="form">
+                    <label class="field">
+                        <span>类型</span>
+                        <select v-model="payment.type">
+                            <option value="pay">支付</option>
+                            <option value="topup">圈存</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>商户 / 说明</span>
+                        <input v-model="payment.merchant" placeholder="如：校园食堂 / 远程圈存" />
+                    </label>
+                    <label class="field">
+                        <span>金额</span>
+                        <input v-model.number="payment.amount" type="number" min="0.01" step="0.5" />
+                    </label>
+                    <label class="field">
+                        <span>账户</span>
+                        <select v-model="payment.account">
+                            <option value="campus">校园消费账户</option>
+                            <option value="bus">公交支付账户</option>
+                            <option value="social">社会支付账户</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>是否安全</span>
+                        <select v-model="payment.safe">
+                            <option :value="true">安全</option>
+                            <option :value="false">疑似风险</option>
+                        </select>
+                    </label>
+                    <button class="primary" @click="sendPayment">立即写入并广播</button>
+                    <p class="hint">支付/圈存会写入后端列表，通过 SSE 同步到学生端与家长端。</p>
+                </div>
+            </div>
+
             <div class="card wide">
                 <div class="card-title">最近推送</div>
                 <div class="list">
@@ -106,10 +144,11 @@
 
 <script setup>
     import { reactive } from 'vue'
-    import { store, addPush, addAlert, setScene } from '../state'
+    import { store, addPush, addAlert, addPayment, setScene } from '../state'
 
     const push = reactive({ level: 'info', title: '', detail: '' })
     const alert = reactive({ title: '', reason: '', level: 'medium' })
+    const payment = reactive({ type: 'pay', amount: 12, account: 'campus', merchant: '校园食堂', safe: true })
 
     const sendPush = () => {
         addPush({ ...push })
@@ -121,6 +160,11 @@
         addAlert({ ...alert })
         alert.title = ''
         alert.reason = ''
+    }
+
+    const sendPayment = async () => {
+        const amount = Math.max(0.01, payment.amount || 0)
+        await addPayment({ ...payment, amount })
     }
 </script>
 

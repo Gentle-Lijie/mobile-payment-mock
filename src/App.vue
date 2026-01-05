@@ -5,6 +5,7 @@
             <nav class="nav">
                 <RouterLink to="/student" class="link" active-class="active">学生端</RouterLink>
                 <RouterLink to="/parent" class="link" active-class="active">家长/管理端</RouterLink>
+                <RouterLink to="/parent-records" class="link" active-class="active">家长消费记录</RouterLink>
             </nav>
         </header>
         <main class="content">
@@ -16,9 +17,12 @@
 </template>
 
 <script setup>
-    import { RouterLink } from 'vue-router'
-    import { onMounted } from 'vue'
+    import { RouterLink, useRoute } from 'vue-router'
+    import { onMounted, computed } from 'vue'
     import { initSync } from './state'
+
+    const route = useRoute()
+    const showNav = computed(() => !route.meta.hideNav)
 
     const openControlWindow = () => {
         const url = `${window.location.origin}/control`

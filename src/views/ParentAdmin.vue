@@ -3,98 +3,125 @@
         <header class="section-header">
             <div>
                 <p class="eyebrow">家长 / 管理端</p>
-                <h1>远程圈存 · 权限调整 · 预警查看</h1>
-                <p class="subtitle">发起空中圈存、查看请求响应、审阅异常预警</p>
+                <h1>远程圈存 · 消费概览</h1>
+                <!-- <p class="subtitle">发起空中圈存，查看支付记录与安全性，数据跨页面同步</p> -->
             </div>
-            <div class="pill">本地静态数据</div>
+            <div class="pill">实时同步</div>
         </header>
 
-        <div class="grid">
-            <div class="card">
-                <div class="card-title">空中圈存</div>
-                <div class="form">
-                    <label class="field">
-                        <span>学生ID</span>
-                        <input v-model="form.student" placeholder="如：STU-20260105" />
-                    </label>
-                    <label class="field">
-                        <span>目标账户</span>
-                        <select v-model="form.account">
-                            <option value="campus">校园消费账户</option>
-                            <option value="bus">公交支付账户</option>
-                            <option value="social">社会支付账户</option>
-                        </select>
-                    </label>
-                    <label class="field">
-                        <span>圈存金额 (¥)</span>
-                        <input v-model.number="form.amount" type="number" min="1" step="1" />
-                    </label>
-                    <button class="primary" @click="sendTopup">发送圈存指令</button>
-                    <p class="hint">流程：家长端发指令 → RSA校验 → MPC芯片写入 → 返回圈存回执（本地静态显示）。</p>
-                </div>
-                <div v-if="lastTopup" class="voucher">
-                    <div class="voucher-head">圈存回执</div>
-                    <div class="voucher-body">
-                        <div>学生：{{ lastTopup.student }}</div>
-                        <div>账户：{{ mapAccount(lastTopup.account) }}</div>
-                        <div>金额：¥ {{ lastTopup.amount }}</div>
-                        <div>状态：{{ lastTopup.status }}</div>
-                        <div>时间：{{ lastTopup.time }}</div>
-                        <div>回执号：{{ lastTopup.id }}</div>
+        <div class="layout">
+            <div class="left">
+                <div class="card">
+                    <div class="card-title">空中圈存</div>
+                    <div class="form">
+                        <label class="field">
+                            <span>学生ID</span>
+                            <input v-model="form.student" placeholder="如：STU-20260105" />
+                        </label>
+                        <label class="field">
+                            <span>目标账户</span>
+                            <select v-model="form.account">
+                                <option value="campus">校园消费账户</option>
+                                <option value="bus">公交支付账户</option>
+                                <option value="social">社会支付账户</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>圈存金额 (¥)</span>
+                            <input v-model.number="form.amount" type="number" min="1" step="1" />
+                        </label>
+                        <button class="primary" @click="sendTopup">发送圈存指令</button>
+                        <p class="hint">圈存写入后端，学生端与本页支付记录实时更新。</p>
                     </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">权限调整（静态示例）</div>
-                <div class="list">
-                    <div class="item" v-for="item in policy" :key="item.id">
-                        <div>
-                            <div class="strong">{{ item.label }}</div>
-                            <div class="muted">当前限额：{{ item.limit }}</div>
+                    <div v-if="lastTopup" class="voucher">
+                        <div class="voucher-head">圈存回执</div>
+                        <div class="voucher-body">
+                            <div>学生：{{ lastTopup.student }}</div>
+                            <div>账户：{{ mapAccount(lastTopup.account) }}</div>
+                            <div>金额：¥ {{ lastTopup.amount }}</div>
+                            <div>状态：{{ lastTopup.status || '成功' }}</div>
+                            <div>时间：{{ lastTopup.time }}</div>
+                            <div>回执号：{{ lastTopup.id }}</div>
                         </div>
-                        <button class="ghost">编辑</button>
                     </div>
                 </div>
-            </div>
 
-            <div class="card wide">
-                <div class="card-title">远程请求日志（静态）</div>
-                <div class="timeline">
-                    <div v-for="log in logs" :key="log.id" class="log-item">
-                        <div class="dot"></div>
-                        <div>
-                            <div class="log-head">{{ log.type }} · {{ log.result }}</div>
-                            <div class="log-meta">{{ log.time }} ｜ {{ log.detail }}</div>
+                <div class="card">
+                    <div class="card-title">消费统计</div>
+                    <div class="stat-grid">
+                        <div class="stat">
+                            <div class="label">总笔数</div>
+                            <div class="value">{{ stats.count }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="label">总金额</div>
+                            <div class="value">¥ {{ stats.totalAmount }}</div>
+                        </div>
+                        <div class="stat warning">
+                            <div class="label">疑似风险笔数</div>
+                            <div class="value">{{ stats.unsafeCount }}</div>
+                        </div>
+                        <div class="stat warning">
+                            <div class="label">疑似风险金额</div>
+                            <div class="value">¥ {{ stats.unsafeAmount }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-title">异常预警</div>
-                <ul class="alerts">
-                    <li v-for="alert in alerts" :key="alert.id" :class="alert.level">
-                        <div class="alert-head">
-                            <span class="badge">{{ alert.level.toUpperCase() }}</span>
-                            <span>{{ alert.title }}</span>
+            <div class="right">
+                <div class="card table-card">
+                    <div class="card-title">支付记录（时间 / 商户 / 安全性）</div>
+                    <div class="table-wrapper">
+                        <table class="pay-table">
+                            <thead>
+                                <tr>
+                                    <th>支付时间</th>
+                                    <th>商户</th>
+                                    <th>金额</th>
+                                    <th>账户</th>
+                                    <th>位置</th>
+                                    <th>场景</th>
+                                    <th>安全</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in paginatedPayments" :key="item.id">
+                                    <td>{{ item.time }}</td>
+                                    <td>{{ item.merchant }}</td>
+                                    <td>¥ {{ Number(item.amount).toFixed(2) }}</td>
+                                    <td>{{ mapAccount(item.account) }}</td>
+                                    <td>
+                                        <a :href="mapLink(item)" target="_blank" rel="noopener" class="link">
+                                            {{ item.lat }}, {{ item.lng }}
+                                        </a>
+                                    </td>
+                                    <td>{{ item.scene }}</td>
+                                    <td>
+                                        <span :class="['pill', item.safe === false ? 'danger' : 'safe']">
+                                            {{ item.safe === false ? '疑似风险' : '安全' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-controls">
+                        <div class="page-size">
+                            每页
+                            <select v-model.number="pageSize">
+                                <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}</option>
+                            </select>
+                            条
                         </div>
-                        <div class="alert-meta">时间：{{ alert.time }} ｜ 位置：{{ alert.lat }}, {{ alert.lng }}</div>
-                        <div class="alert-meta">依据：{{ alert.reason }}</div>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="card">
-                <div class="card-title">行为推送</div>
-                <div class="timeline">
-                    <div v-for="msg in pushes" :key="msg.id" class="log-item">
-                        <div class="dot" :class="'lv-' + msg.level"></div>
-                        <div>
-                            <div class="log-head">[{{ msg.level.toUpperCase() }}] {{ msg.title }}</div>
-                            <div class="log-meta">{{ msg.time }} ｜ {{ msg.detail }}</div>
+                        <div class="pager">
+                            <button class="ghost" :disabled="currentPage === 1" @click="currentPage--">上一页</button>
+                            <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
+                            <button class="ghost" :disabled="currentPage === totalPages"
+                                @click="currentPage++">下一页</button>
                         </div>
                     </div>
+                    <p class="hint">数据来自后端 /state，与控制窗口同步；新增支付/圈存将实时出现在此表。位置点击可跳转高德地图。</p>
                 </div>
             </div>
         </div>
@@ -102,43 +129,73 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
-import { store } from '../state'
+    import { reactive, ref, computed, watch } from 'vue'
+    import { store, addPayment } from '../state'
 
     const form = reactive({ student: 'STU-20260105', account: 'campus', amount: 50 })
     const lastTopup = ref(null)
 
-    const policy = [
-        { id: 'p1', label: '校园消费账户', limit: '单笔 ¥200 / 日累计 ¥500' },
-        { id: 'p2', label: '公交支付账户', limit: '单笔 ¥20 / 日累计 ¥60' },
-        { id: 'p3', label: '社会支付账户', limit: '单笔 ¥500 / 日累计 ¥1000' },
-    ]
+    const payments = computed(() => store.payments)
+    const pageSizeOptions = [5, 10, 20, 50]
+    const pageSize = ref(10)
+    const currentPage = ref(1)
 
-    const logs = [
-        { id: 'l1', type: '空中圈存', result: '成功', time: '2026-01-05 09:20:11', detail: '校园账户 +¥50 （MPC写入成功）' },
-        { id: 'l2', type: '权限调整', result: '成功', time: '2026-01-04 18:42:03', detail: '公交账户单笔限额改为 ¥20' },
-        { id: 'l3', type: '远程冻结', result: '失败', time: '2026-01-04 08:13:29', detail: '指令签名校验不通过，已拒绝' },
-    ]
+    const sortedPayments = computed(() => payments.value.slice().sort((a, b) => new Date(b.time) - new Date(a.time)))
 
-    const alerts = computed(() => store.alerts)
-    const pushes = computed(() => store.pushMessages)
+    const totalPages = computed(() => {
+        const size = Math.max(1, Number(pageSize.value) || 1)
+        return Math.max(1, Math.ceil(sortedPayments.value.length / size))
+    })
 
-    const mapAccount = (id) =>
-        id === 'campus' ? '校园消费账户' : id === 'bus' ? '公交支付账户' : '社会支付账户'
+    watch([pageSize, sortedPayments], () => {
+        currentPage.value = 1
+    })
 
-    const sendTopup = () => {
-        const amount = Math.max(1, form.amount || 0)
-        const id = `TP-${Date.now()}`
-        lastTopup.value = {
-            id,
-            student: form.student || 'STU-000000',
-            account: form.account,
-            amount,
-            status: '成功（本地）',
-            time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    watch(totalPages, (val) => {
+        if (currentPage.value > val) currentPage.value = val
+    })
+
+    const paginatedPayments = computed(() => {
+        const size = Math.max(1, Number(pageSize.value) || 1)
+        const start = (currentPage.value - 1) * size
+        return sortedPayments.value.slice(start, start + size)
+    })
+
+    const stats = computed(() => {
+        const totalAmount = payments.value.reduce((s, p) => s + Number(p.amount || 0), 0)
+        const unsafeAmount = payments.value.filter((p) => p.safe === false).reduce((s, p) => s + Number(p.amount || 0), 0)
+        const unsafeCount = payments.value.filter((p) => p.safe === false).length
+        return {
+            totalAmount: totalAmount.toFixed(2),
+            unsafeAmount: unsafeAmount.toFixed(2),
+            unsafeCount,
+            count: payments.value.length,
         }
-        alert('圈存指令已发送（本地回执）')
+    })
+
+    const mapAccount = (id) => (id === 'campus' ? '校园消费账户' : id === 'bus' ? '公交支付账户' : '社会支付账户')
+    const mapLink = (item) => `https://uri.amap.com/marker?position=${item.lng},${item.lat}&name=${encodeURIComponent(item.merchant || '位置')}`
+
+    const sendTopup = async () => {
+        const amount = Math.max(1, form.amount || 0)
+    const data = await addPayment({
+        type: 'topup',
+        amount,
+        account: form.account,
+        merchant: `圈存-${form.student || 'STU-000000'}`,
+        safe: true,
+        scene: '家长远程',
+    })
+    lastTopup.value = data || {
+        id: `TP-${Date.now()}`,
+        student: form.student || 'STU-000000',
+        account: form.account,
+        amount,
+        status: '成功（本地）',
+        time: new Date().toISOString().replace('T', ' ').slice(0, 19),
     }
+    alert('圈存指令已发送并同步')
+}
 </script>
 
 <style scoped>
@@ -146,6 +203,10 @@ import { store } from '../state'
         display: flex;
         flex-direction: column;
         gap: 16px;
+        height: 100vh;
+        overflow: hidden;
+        padding: 16px;
+        box-sizing: border-box;
     }
 
     .section-header {
@@ -178,29 +239,95 @@ import { store } from '../state'
         font-weight: 600;
     }
 
-    .grid {
+    .layout {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: 3fr 7fr;
         gap: 16px;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .left,
+    .right {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 0;
     }
 
     .card {
         background: #fff;
         border-radius: 14px;
         padding: 16px;
+        width: 100%;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
         gap: 12px;
     }
 
-    .card.wide {
-        grid-column: span 2;
+    .table-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
     .card-title {
         font-weight: 700;
         font-size: 16px;
+    }
+
+    .table-controls {
+        margin-top: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .page-size select {
+        margin: 0 6px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+    }
+
+    .pager {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+    }
+
+    .stat {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px;
+        background: #f8fafc;
+    }
+
+    .stat.warning {
+        border-color: #f97316;
+        background: #fff7ed;
+    }
+
+    .stat .label {
+        font-size: 13px;
+        color: #475569;
+    }
+
+    .stat .value {
+        font-weight: 700;
+        font-size: 20px;
+        margin-top: 6px;
     }
 
     .form {
@@ -376,9 +503,64 @@ import { store } from '../state'
         border-radius: 8px;
     }
 
+    .table-wrapper {
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+        max-height: calc(100vh - 220px);
+    }
+
+    .pay-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .pay-table th,
+    .pay-table td {
+        padding: 10px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .pay-table th {
+        background: #f8fafc;
+        font-weight: 700;
+    }
+
+    .pay-table tr:hover {
+        background: #f1f5f9;
+    }
+
+    .pill.safe {
+        background: #ecfdf3;
+        color: #16a34a;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-weight: 600;
+    }
+
+    .pill.danger {
+        background: #fff7ed;
+        color: #f97316;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-weight: 600;
+    }
+
+    .link {
+        color: #0ea5e9;
+        text-decoration: underline;
+    }
+
     @media (max-width: 768px) {
-        .card.wide {
-            grid-column: span 1;
+        .layout {
+            grid-template-columns: 1fr;
+        }
+
+        .table-wrapper {
+            max-height: 50vh;
         }
     }
 </style>

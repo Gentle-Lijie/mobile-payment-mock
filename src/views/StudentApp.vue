@@ -4,7 +4,8 @@
       <div>
         <p class="eyebrow">学生端</p>
         <h1>移动支付钱包 · 场景识别 & 支付联动</h1>
-        <p class="subtitle">位置+NFC 场景切换、支付-定位联动、余额变动、预警提示</p>
+                <!-- <p class="subtitle">位置+NFC 场景切换、支付-定位联动、余额变动、预警提示</p> -->
+     
       </div>
       <div class="pill">当前场景：<strong>{{ sceneLabel }}</strong></div>
     </header>
@@ -130,7 +131,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { store, setScene } from '../state'
+    import { store, setScene, addPayment } from '../state'
     import GaodeMap from '../components/GaodeMap.vue'
     import { fenceCoords } from '../mapConfig'
 
@@ -170,6 +171,12 @@ const switchScene = (scene) => {
   setScene(scene.id)
 }
 
+    const withAccountLabel = (rec) => {
+        if (!rec) return rec
+        const accLabel = accountList.find((a) => a.id === rec.account)?.label
+        return { ...rec, accountLabel: rec.accountLabel || accLabel || rec.account }
+    }
+
 watch(
   () => store.currentScene,
   (id) => {
@@ -179,7 +186,7 @@ watch(
   { immediate: true }
 )
 
-const mockPay = () => {
+    const mockPay = async () => {
   const acc = accountList.find((a) => a.id === activeAccount.value)
   if (!acc) return
   const amount = Math.max(0, payAmount.value || 0)
@@ -191,21 +198,31 @@ const mockPay = () => {
     alert('余额不足')
     return
   }
-  acc.balance = parseFloat((acc.balance - amount).toFixed(2))
-  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  const id = `TX-${Date.now()}`
+    acc.balance = parseFloat((acc.balance - amount).toFixed(2))
   const loc = activeLocation.value
-  const entry = {
-    id,
+    const record = await addPayment({
+        type: 'pay',
     amount,
-    accountLabel: acc.label,
-    time: timestamp,
-    lat: loc.lat,
-    lng: loc.lng,
-    scene: sceneLabel.value,
-    note: note.value || '支付',
-  }
-  lastVoucher.value = entry
+      account: acc.id,
+      merchant: note.value || '支付',
+      safe: true,
+      scene: sceneLabel.value,
+      lat: loc.lat,
+      lng: loc.lng,
+  })
+    lastVoucher.value = withAccountLabel(
+        record || {
+            id: `TX-${Date.now()}`,
+            amount,
+            account: acc.id,
+          accountLabel: acc.label,
+          merchant: note.value || '支付',
+          time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+          lat: loc.lat,
+          lng: loc.lng,
+          scene: sceneLabel.value,
+      }
+  )
 }
 </script>
 
