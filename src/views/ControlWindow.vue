@@ -14,9 +14,12 @@
                 <div class="card-title">场景切换</div>
                 <p class="hint">切换后学生端当前场景与账户随之变化</p>
                 <div class="scene-buttons">
-                    <button v-for="scene in store.scenes" :key="scene.id"
+                    <button
+                        v-for="scene in store.scenes"
+                        :key="scene.id"
                         :class="['scene-btn', { active: store.currentScene === scene.id }]"
-                        @click="store.currentScene = scene.id">
+                        @click="setScene(scene.id)"
+                    >
                         <div class="name">{{ scene.name }}</div>
                         <div class="desc">{{ scene.desc }}</div>
                         <div class="meta">{{ scene.lat }}, {{ scene.lng }} · NFC: {{ scene.nfc ? '公交信号' : '未检测' }}</div>
@@ -103,7 +106,7 @@
 
 <script setup>
     import { reactive } from 'vue'
-    import { store, addPush, addAlert } from '../state'
+    import { store, addPush, addAlert, setScene } from '../state'
 
     const push = reactive({ level: 'info', title: '', detail: '' })
     const alert = reactive({ title: '', reason: '', level: 'medium' })

@@ -17,11 +17,17 @@
 
 <script setup>
     import { RouterLink } from 'vue-router'
+    import { onMounted } from 'vue'
+    import { initSync } from './state'
 
     const openControlWindow = () => {
         const url = `${window.location.origin}/control`
         window.open(url, 'control-panel', 'width=1180,height=900,noopener')
     }
+
+    onMounted(() => {
+        initSync()
+    })
 </script>
 
 <style>

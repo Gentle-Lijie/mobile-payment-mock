@@ -128,7 +128,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { store } from '../state'
+import { store, setScene } from '../state'
 
 const scenes = store.scenes
 
@@ -164,7 +164,7 @@ const pushes = computed(() => store.pushMessages)
 const currentScene = computed(() => store.currentScene)
 
 const switchScene = (scene) => {
-  store.currentScene = scene.id
+  setScene(scene.id)
 }
 
 watch(

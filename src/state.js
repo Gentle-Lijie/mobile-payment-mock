@@ -1,6 +1,9 @@
 import { reactive } from 'vue'
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8788'
 const timestamp = () => new Date().toISOString().replace('T', ' ').slice(0, 19)
+let initialized = false
+let evtSource = null
 
 export const store = reactive({
   scenes: [
@@ -12,55 +15,100 @@ export const store = reactive({
   pushMessages: [
     { id: 'p-init', level: 'info', title: '系统就绪', detail: '状态控制窗口可用于切换场景与推送告警', time: timestamp() },
   ],
-  alerts: [
-    {
-      id: 'a1',
-      level: 'high',
-      title: '一级预警：疑似盗刷风险',
-      time: '2026-01-05 09:25:14',
-      lat: '30.3200',
-      lng: '120.1900',
-      reason: '10分钟内跨越15公里异地消费，轨迹偏离预设路线',
-    },
-    {
-      id: 'a2',
-      level: 'medium',
-      title: '二级预警：异常频次',
-      time: '2026-01-05 08:58:02',
-      lat: '30.2768',
-      lng: '120.1605',
-      reason: '30分钟内连续4笔小额支付，触发频次阈值',
-    },
-  ],
+  alerts: [],
 })
 
-export function addPush({ level = 'info', title, detail }) {
-  const msg = {
-    id: `p-${Date.now()}`,
-    level,
-    title: title || '行为推送',
-    detail: detail || '未填写详情',
-    time: timestamp(),
-  }
-  store.pushMessages = [msg, ...store.pushMessages].slice(0, 12)
-  if (level === 'high' || level === 'critical') {
-    addAlert({
-      level: level === 'critical' ? 'high' : level,
-      title: `同步告警：${msg.title}`,
-      reason: msg.detail,
-    })
+async function fetchState() {
+  try {
+    const res = await fetch(`${API_BASE}/state`)
+    if (!res.ok) throw new Error('state fetch failed')
+    const data = await res.json()
+    if (data.scenes) store.scenes = data.scenes
+    if (data.currentScene) store.currentScene = data.currentScene
+    if (Array.isArray(data.pushMessages)) store.pushMessages = data.pushMessages
+    if (Array.isArray(data.alerts)) store.alerts = data.alerts
+  } catch (e) {
+    console.warn('[sync] fetch state failed, using defaults', e)
   }
 }
 
-export function addAlert({ level = 'medium', title, reason }) {
-  const alert = {
-    id: `a-${Date.now()}`,
+function connectEvents() {
+  if (evtSource) return
+  evtSource = new EventSource(`${API_BASE}/events`)
+  evtSource.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data)
+      if (payload.type === 'scene') {
+        store.currentScene = payload.data
+      }
+      if (payload.type === 'push') {
+        store.pushMessages = [payload.data, ...store.pushMessages].slice(0, 50)
+      }
+      if (payload.type === 'alert') {
+        store.alerts = [payload.data, ...store.alerts].slice(0, 50)
+      }
+    } catch (e) {
+      console.warn('[sync] parse event failed', e)
+    }
+  }
+  evtSource.onerror = () => {
+    console.warn('[sync] event source error, retrying in 2s')
+    evtSource?.close()
+    evtSource = null
+    setTimeout(connectEvents, 2000)
+  }
+}
+
+export async function initSync() {
+  if (initialized) return
+  initialized = true
+  await fetchState()
+  connectEvents()
+}
+
+export async function setScene(id) {
+  store.currentScene = id
+  try {
+    await fetch(`${API_BASE}/scene`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+  } catch (e) {
+    console.warn('[sync] setScene failed', e)
+  }
+}
+
+export async function addPush({ level = 'info', title, detail }) {
+  const payload = {
+    level,
+    title: title || '行为推送',
+    detail: detail || '未填写详情',
+  }
+  try {
+    await fetch(`${API_BASE}/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (e) {
+    console.warn('[sync] addPush failed', e)
+  }
+}
+
+export async function addAlert({ level = 'medium', title, reason }) {
+  const payload = {
     level,
     title: title || '新增预警',
-    time: timestamp(),
-    lat: '30.2700',
-    lng: '120.1600',
     reason: reason || '未提供依据',
   }
-  store.alerts = [alert, ...store.alerts].slice(0, 12)
+  try {
+    await fetch(`${API_BASE}/alert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (e) {
+    console.warn('[sync] addAlert failed', e)
+  }
 }
