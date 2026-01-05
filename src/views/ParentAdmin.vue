@@ -11,7 +11,7 @@
 
         <div class="grid">
             <div class="card">
-                <div class="card-title">空中圈存（模拟请求）</div>
+                <div class="card-title">空中圈存</div>
                 <div class="form">
                     <label class="field">
                         <span>学生ID</span>

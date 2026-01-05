@@ -2,6 +2,34 @@ import { reactive } from 'vue'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8788'
 const timestamp = () => new Date().toISOString().replace('T', ' ').slice(0, 19)
+
+const defaultPushes = () => [
+  { id: 'p-init', level: 'info', title: '系统就绪', detail: '状态控制窗口可用于切换场景与推送告警', time: timestamp() },
+  { id: 'p-geo', level: 'info', title: '位置签到完成', detail: '已在校园围栏内完成签到，继续保持在线即可获得福利', time: timestamp() },
+  { id: 'p-limit', level: 'medium', title: '公交小额免密提醒', detail: '公交账户今日累计 12.5 元，仍在阈值内', time: timestamp() },
+  { id: 'p-risk', level: 'high', title: '异地支付尝试', detail: '检测到 15km 外的扫码尝试，已自动切换为社会支付账户', time: timestamp() },
+]
+
+const defaultAlerts = () => [
+  {
+    id: 'a-geo',
+    level: 'medium',
+    title: '围栏外支付拦截',
+    time: timestamp(),
+    lat: '30.2705',
+    lng: '120.1612',
+    reason: '尝试在围栏外使用校园账户支付，已阻断并提示改用社会支付账户',
+  },
+  {
+    id: 'a-nfc',
+    level: 'high',
+    title: '公交NFC信号丢失',
+    time: timestamp(),
+    lat: '30.2768',
+    lng: '120.1605',
+    reason: '公交线路信号中断，已暂缓扣款并保留交易凭证',
+  },
+]
 let initialized = false
 let evtSource = null
 
@@ -12,10 +40,8 @@ export const store = reactive({
     { id: 'social', name: '社会场景', desc: '未检测校园/公交信号，使用社会支付账户', lat: '30.2801', lng: '120.1658', nfc: false },
   ],
   currentScene: 'campus',
-  pushMessages: [
-    { id: 'p-init', level: 'info', title: '系统就绪', detail: '状态控制窗口可用于切换场景与推送告警', time: timestamp() },
-  ],
-  alerts: [],
+  pushMessages: defaultPushes(),
+  alerts: defaultAlerts(),
 })
 
 async function fetchState() {

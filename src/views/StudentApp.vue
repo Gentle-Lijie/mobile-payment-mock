@@ -9,126 +9,130 @@
       <div class="pill">当前场景：<strong>{{ sceneLabel }}</strong></div>
     </header>
 
-    <div class="grid">
-      <div class="card wide">
-        <div class="card-title">场景识别与账户调度（模拟）</div>
-        <div class="scene-grid">
-          <button
-            v-for="scene in scenes"
-            :key="scene.id"
-            class="scene-btn"
-            :class="{ active: currentScene === scene.id }"
-            @click="switchScene(scene)"
-          >
-            <div class="scene-name">{{ scene.name }}</div>
-            <div class="scene-desc">{{ scene.desc }}</div>
-            <div class="scene-meta">
-              <span>坐标：{{ scene.lat }}, {{ scene.lng }}</span>
-              <span v-if="scene.nfc">NFC：公交信号检测</span>
-              <span v-else>NFC：未检测</span>
-            </div>
-          </button>
-        </div>
-        <div class="map-box">
-          <div class="map-head">
-            <div>
-              <p class="eyebrow">虚拟定位</p>
-              <h3>{{ activeLocation.label }}</h3>
-              <p class="coords">{{ activeLocation.lat }}, {{ activeLocation.lng }}</p>
-            </div>
-            <div class="badge">{{ sceneLabel }} · 已激活 {{ activeAccountLabel }}</div>
-          </div>
-          <div class="map-body">
-            <div class="pin">📍</div>
-            <div class="orbit"></div>
+        <div class="split">
+            <div class="left">
+                <div class="card scene-card">
+                    <div class="card-title">场景识别与账户调度</div>
+                    <div class="scene-grid">
+                        <button v-for="scene in scenes" :key="scene.id" class="scene-btn"
+                            :class="{ active: currentScene === scene.id }" @click="switchScene(scene)">
+                            <div class="scene-name">{{ scene.name }}</div>
+                            <div class="scene-desc">{{ scene.desc }}</div>
+                            <div class="scene-meta">
+                                <span>坐标：{{ scene.lat }}, {{ scene.lng }}</span>
+                                <span v-if="scene.nfc">NFC：公交信号检测</span>
+                                <span v-else>NFC：未检测</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="map-box">
+                        <div class="map-head">
+                            <div>
+
+                                <p class="eyebrow">电子围栏</p>
+                                <h3>{{ activeLocation.label }}</h3>
+
+                            </div>
+                            <div class="badge">{{ sceneLabel }} · 已激活 {{ activeAccountLabel }}</div>
+                        </div>
+
+                        <GaodeMap :scene="sceneLabel" :coords="fenceCoords" :point="activeLocation" />
+
+         
           </div>
         </div>
       </div>
 
-      <div class="card">
-          <div class="card-title">账户余额</div>
-        <div class="balances">
-          <div v-for="acc in accountList" :key="acc.id" class="balance" :class="{ highlight: activeAccount === acc.id }">
-            <div class="label">{{ acc.label }}</div>
-            <div class="value">¥ {{ acc.balance.toFixed(2) }}</div>
-            <div class="muted">限额：{{ acc.limit }}</div>
-          </div>
-        </div>
-      </div>
+            <div class="right">
+                <div class="card-grid">
 
-      <div class="card">
-        <div class="card-title">支付-定位联动（模拟扣费）</div>
-        <div class="form">
-          <label class="field">
-            <span>消费金额</span>
-            <input v-model.number="payAmount" type="number" step="0.5" min="0" />
-          </label>
-          <label class="field">
-            <span>备注</span>
-            <input v-model="note" placeholder="如：公交支付 / 校园餐饮" />
-          </label>
-          <button class="primary" @click="mockPay">执行支付并联动定位</button>
-          <p class="hint">完成后会生成“支付-定位联动数据”条目，附带经纬度与时间戳。</p>
-        </div>
-        <div v-if="lastVoucher" class="voucher">
-          <div class="voucher-head">交易成功凭证</div>
-          <div class="voucher-body">
-            <div>金额：¥ {{ lastVoucher.amount.toFixed(2) }}</div>
-            <div>账户：{{ lastVoucher.accountLabel }}</div>
-            <div>时间：{{ lastVoucher.time }}</div>
-            <div>位置：{{ lastVoucher.lat }}, {{ lastVoucher.lng }}</div>
-            <div>场景：{{ lastVoucher.scene }}</div>
-            <div>流水号：{{ lastVoucher.id }}</div>
-          </div>
-        </div>
-      </div>
+           <div class="card">
+                        <div class="card-title">账户余额</div>
+                        <div class="balances">
+                            <div v-for="acc in accountList" :key="acc.id" class="balance"
+                                :class="{ highlight: activeAccount === acc.id }">
+                                <div class="label">{{ acc.label }}</div>
+                                <div class="value">¥ {{ acc.balance.toFixed(2) }}</div>
+                                <div class="muted">限额：{{ acc.limit }}</div>
+                            </div>
+                        </div>
+                    </div>
 
-      <div class="card wide">
-        <div class="card-title">支付-定位联动数据（最近记录）</div>
-        <div class="timeline">
-          <div v-for="item in logs" :key="item.id" class="log-item">
-            <div class="dot"></div>
-            <div>
-              <div class="log-head">{{ item.scene }} · ¥ {{ item.amount.toFixed(2) }} · {{ item.accountLabel }}</div>
-              <div class="log-meta">{{ item.time }} ｜ {{ item.lat }}, {{ item.lng }} ｜ {{ item.note }}</div>
+
+
+            <div class="card">
+                        <div class="card-title">支付-定位联动</div>
+                        <div class="form">
+                            <label class="field">
+                                <span>消费金额</span>
+                                <input v-model.number="payAmount" type="number" step="0.5" min="0" />
+                            </label>
+                            <label class="field">
+                                <span>备注</span>
+                                <input v-model="note" placeholder="如：公交支付 / 校园餐饮" />
+                            </label>
+                            <button class="primary" @click="mockPay">执行支付并联动定位</button>
+
+                            <p class="hint">提交后生成一条支付凭证，并记录当前场景与经纬度。</p>
+                        </div>
+                        <div v-if="lastVoucher" class="voucher">
+                            <div class="voucher-head">交易成功凭证</div>
+                            <div class="voucher-body">
+                                <div>金额：¥ {{ lastVoucher.amount.toFixed(2) }}</div>
+                                <div>账户：{{ lastVoucher.accountLabel }}</div>
+                                <div>时间：{{ lastVoucher.time }}</div>
+                                <div>位置：{{ lastVoucher.lat }}, {{ lastVoucher.lng }}</div>
+                                <div>场景：{{ lastVoucher.scene }}</div>
+                                <div>流水号：{{ lastVoucher.id }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+
+                    <div class="card">
+                        <div class="card-title">异常预警</div>
+                        <ul class="alerts">
+                            <li v-for="alert in alerts" :key="alert.id" :class="alert.level">
+                                <div class="alert-head">
+                                    <span class="badge">{{ alert.level.toUpperCase() }}</span>
+                                    <span>{{ alert.title }}</span>
+                                </div>
+                                <div class="alert-meta">时间：{{ alert.time }} ｜ 位置：{{ alert.lat }}, {{ alert.lng }}</div>
+                                <div class="alert-meta">依据：{{ alert.reason }}</div>
+                            </li>
+                        </ul>
+                    </div>
+
+
+
+            <div class="card">
+                        <div class="card-title">行为推送</div>
+                        <div class="timeline">
+                            <div v-for="msg in pushes" :key="msg.id" class="log-item">
+                                <div class="dot" :class="'lv-' + msg.level"></div>
+                                <div>
+                                    <div class="log-head">[{{ msg.level.toUpperCase() }}] {{ msg.title }}</div>
+                                    <div class="log-meta">{{ msg.time }} ｜ {{ msg.detail }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-          </div>
         </div>
-      </div>
 
-      <div class="card">
-        <div class="card-title">异常预警</div>
-        <ul class="alerts">
-          <li v-for="alert in alerts" :key="alert.id" :class="alert.level">
-            <div class="alert-head">
-              <span class="badge">{{ alert.level.toUpperCase() }}</span>
-              <span>{{ alert.title }}</span>
-            </div>
-            <div class="alert-meta">时间：{{ alert.time }} ｜ 位置：{{ alert.lat }}, {{ alert.lng }}</div>
-            <div class="alert-meta">依据：{{ alert.reason }}</div>
-          </li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <div class="card-title">行为推送</div>
-        <div class="timeline">
-          <div v-for="msg in pushes" :key="msg.id" class="log-item">
-            <div class="dot" :class="'lv-' + msg.level"></div>
-            <div>
-              <div class="log-head">[{{ msg.level.toUpperCase() }}] {{ msg.title }}</div>
-              <div class="log-meta">{{ msg.time }} ｜ {{ msg.detail }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+ 
   </section>
 </template>
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { store, setScene } from '../state'
+    import GaodeMap from '../components/GaodeMap.vue'
+    import { fenceCoords } from '../mapConfig'
 
 const scenes = store.scenes
 
@@ -140,8 +144,7 @@ const accountList = reactive([
 
 const activeAccount = ref('campus')
 const payAmount = ref(2.5)
-const note = ref('公交支付')
-const logs = ref([])
+    const note = ref('公交支付')
 const lastVoucher = ref(null)
 
 const sceneLabel = computed(() => {
@@ -202,7 +205,6 @@ const mockPay = () => {
     scene: sceneLabel.value,
     note: note.value || '支付',
   }
-  logs.value = [entry, ...logs.value].slice(0, 6)
   lastVoucher.value = entry
 }
 </script>
@@ -244,9 +246,21 @@ const mockPay = () => {
   font-weight: 600;
 }
 
-.grid {
+
+    .split {
+
+     
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: 1.2fr 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .right .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+
+     
   gap: 16px;
 }
 
@@ -260,8 +274,11 @@ const mockPay = () => {
   gap: 12px;
 }
 
-.card.wide {
-  grid-column: span 2;
+
+    .scene-card {
+        height: 100%;
+
+   
 }
 
 .card-title {
@@ -531,9 +548,15 @@ input {
   background: rgba(255, 255, 255, 0.25);
 }
 
-@media (max-width: 768px) {
-  .card.wide {
-    grid-column: span 1;
+    @media (max-width: 960px) {
+        .split {
+            grid-template-columns: 1fr;
+        }
+
+        .right .card-grid {
+            grid-template-columns: 1fr;
+
+     
   }
 }
 </style>
