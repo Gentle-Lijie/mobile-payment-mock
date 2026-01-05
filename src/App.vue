@@ -12,7 +12,7 @@
             <router-view />
         </main>
 
-        <button class="floating" @click="openControlWindow">状态控制窗口</button>
+        <button v-if="shouNav" class="floating" @click="openControlWindow">状态控制窗口</button>
     </div>
 </template>
 
